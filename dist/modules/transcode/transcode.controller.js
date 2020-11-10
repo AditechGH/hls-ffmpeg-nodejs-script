@@ -23,7 +23,7 @@ class TranscodeController {
             const destination = 'public/stream';
             const createHLSVOD = child_process_1.spawn('bash', [scriptFile, videoFile, destination]);
             createHLSVOD.stdout.on('data', d => console.log(`stdout info: ${d}`));
-            createHLSVOD.stderr.on('data', d => console.log(`stderr error: ${d}`));
+            createHLSVOD.stderr.on('data', d => console.log(`${d}`));
             createHLSVOD.on('error', d => console.log(`error: ${d}`));
             createHLSVOD.on('close', code => console.log(`child process ended with code ${code}`));
             res.send('success');

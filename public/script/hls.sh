@@ -38,7 +38,7 @@ key_frames_interval=${key_frames_interval%.*} # truncate to integer
 # static parameters that are similar for all renditions
 static_params="-c:a aac -ar 48000 -c:v libx264 -profile:v main -crf 20 -sc_threshold 0"
 static_params+=" -g ${key_frames_interval} -keyint_min ${key_frames_interval} -hls_time ${segment_target_duration}"
-# static_params+=" -hls_playlist_type vod"
+static_params+=" -hls_playlist_type vod"
 
 # misc params
 misc_params="-hide_banner -y"
@@ -47,9 +47,6 @@ master_playlist="#EXTM3U
 #EXT-X-VERSION:3
 "
 cmd=""
-count=0
-num=1
-maxbandwidth=0
 for rendition in "${renditions[@]}"; do
   # drop extraneous spaces
   rendition="${rendition/[[:space:]]+/ }"
@@ -65,19 +62,16 @@ for rendition in "${renditions[@]}"; do
   maxrate="$(echo "`echo ${bitrate} | grep -oE '[[:digit:]]+'`*${max_bitrate_ratio}" | bc)"
   bufsize="$(echo "`echo ${bitrate} | grep -oE '[[:digit:]]+'`*${rate_monitor_buffer_ratio}" | bc)"
   bandwidth="$(echo ${bitrate} | grep -oE '[[:digit:]]+')000"
-  name="${height}p" 
-  maxbandwidth="$(echo ${maxbandwidth}+${bandwidth} | bc)"
-  count="$(echo ${count}+${num} | bc)"
-  average_bandwidth="$(echo ${maxbandwidth}/${count} | bc)"
+  name="${height}p"
 
-#   cmd+=" ${static_params} -vf scale=w=${width}:h=${height}:force_original_aspect_ratio=decrease"
-  cmd+=" ${static_params} -vf scale=w=${width}:h=${height} -strict experimental"
+  cmd+=" ${static_params} -vf scale=w=${width}:-2"
+  # cmd+=" ${static_params} -vf scale=w=${width}:h=${height}"
   cmd+=" -b:v ${bitrate} -maxrate ${maxrate%.*}k -bufsize ${bufsize%.*}k -b:a ${audiorate}"
   cmd+=" -hls_segment_filename ${target}/${name}_%03d.ts ${target}/${name}.m3u8"
   
-  
+
   # add rendition entry in the master playlist
-  master_playlist+="#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=${average_bandwidth},BANDWIDTH=${bandwidth},RESOLUTION=${resolution},CODECS=aac.h264\n${name}.m3u8\n"
+  master_playlist+="#EXT-X-STREAM-INF:BANDWIDTH=${bandwidth},RESOLUTION=${resolution}\n${name}.m3u8\n"
 done
 
 # start conversion
